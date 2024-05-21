@@ -1,14 +1,13 @@
 %WRIGHT_EQN_DDE_VALIDATION - Compute local unstable manifold for the pseudospectral ODE associated to Wright's equation
 %
 %   Description:
-%       WRIGHT_EQN_DDE_VALIDATION description
+%       WRIGHT_EQN_DDE_VALIDATION assumes that the script "wright_eqn_ode_validation.m" has already been run
+%       successfully.
 %
-%   Output:
-%       WRIGHT_EQN_DDE_VALIDATION output
 %
 %   Subfunctions: none
 %   Classes required: none
-%   Other m-files required: none
+%   Other m-files required: wright_eqn_ode_validation.m
 %   MAT-files required: none
 
 %   Author: Shane Kepley
@@ -20,43 +19,20 @@ close all
 clc
 computerPath = pcpath('mac');
 addpath(genpath([computerPath,'Dropbox/Matlab/IMP']))
+load ode_data_final
 
-% set up parameters for the pseudospectral approximation
-n = 20;
-numCoef = 25;
-alpha = 2;
-alpha_enclosure = intval('2');
 
-%% set up eigenvector scaling. 
-% This code will later be replaced and only the eigenvector scalings from the validated ODE problem will be used in its place.
 
-% set up linearization and get eigenvalue/eigenvector data
-p = zeros(1, n+1);
-cheb_diff_matrix = cheb(n, -1, 0);
-D = cheb_diff_matrix(2:end, 2:end);
-row1 = [zeros(1, n), -alpha];
-A = cat(1, row1, cheb_diff_matrix(2:end, :));
-[vec, val] = eig(A);
+% rename eigenvalues from the PSA to avoid naming conflicts
+lambda_PSA = mid(lambda);
+lambda_PSA_enclosure = lambda_enclosure;
 
-% get vector of ordered eigenvalues
-val = diag(val);
-unstable_idx = find(real(val) == max(real(val)), 1);
-lambda_1 = val(unstable_idx);
-lambda_1 = real(lambda_1) + 1i*abs(imag(lambda_1)); % force the index lambda_1 to refer to the eigenvalue with positive imaginary part
-lambda_2 = conj(lambda_1);
-lambda_PSA = [lambda_1, lambda_2];
-
-% get scaled eigenvector for lambda_1
-ODE_eigenvector_scaling = .5;  % adjust scaling of PSA eigenvectors
-pos_eig_idx = find(val == lambda_1);
-xi_1 = vec(:, pos_eig_idx);
-xi_1 = ODE_eigenvector_scaling*xi_1;  % scale eigenvector
 
 %% Get an interval enclosure of the DDE eigenvalues
 
 T_eig_DDE = @(z)z - (z + alpha_enclosure.*exp(-z))./(1 - alpha_enclosure.*exp(-z));
 DT_eig_DDE = @(z)(z + alpha_enclosure*exp(-z))*(alpha_enclosure*exp(-z))/(1 - alpha_enclosure*exp(-z)).^2;
-lambda_DDE = mid(lambda_PSA(1));
+lambda_DDE = mid(lambda_PSA_enclosure(1));
 for niter = 1:10
     lambda_DDE = T_eig_DDE(lambda_DDE);
 end
@@ -67,29 +43,29 @@ z_hat_enclosure = midrad(lambda_DDE, 0);
 Y = sup(norm(T_eig_DDE(z_hat_enclosure) - z_hat_enclosure));
 test_ball = midrad(lambda_DDE, 1e-3);
 Z = sup(norm(DT_eig_DDE(test_ball)));
-rEigenvalue = sup(intval(Y)/intval(1 - Z))
+rEigenvalue = sup(intval(Y)/intval(1 - Z));
 lambda_enclosure = midrad([lambda_DDE, conj(lambda_DDE)], [rEigenvalue, rEigenvalue]);
 
 
 
 %% This will be replaced by the implementation from wright_eqn_ode_validation
 % a = wright_solve_homological_diagonal(alpha, lambda_DDE, A, xi_1, numCoef, n);
-a = wright_solve_homological_diagonal(alpha, mid(lambda_enclosure), A, xi_1, numCoef, n);
-
-a_gt = a(1);
-b_gt = a(2:end);
-x_hat = intval(a_gt);  % An interval numerical approximation where our proofs are centered
-
-
+% a = wright_solve_homological_diagonal(alpha, mid(lambda_enclosure), A, xi_1, numCoef, n);
+% 
+% a_gt = a(1);
+% b_gt = a(2:end);
+% x_hat = intval(a_gt);  % An interval numerical approximation where our proofs are centered
+% 
+% 
 DDE_eigenvector_scaling = real(xi_1(1));
 DDE_eigenvector_scaling_enclosure = intval(real(xi_1(1)));
 F_DDE_enclosure = wright_DDE_zero_map_full(alpha_enclosure, DDE_eigenvector_scaling_enclosure, lambda_enclosure, x_hat);
-% ab = wright_DDE_zero_map_full(alpha, ODE_eigenvector_scaling, lambda_PSA, a_gt);
- 
-disp(norm(F_DDE_enclosure))
+% % ab = wright_DDE_zero_map_full(alpha, ODE_eigenvector_scaling, lambda_PSA, a_gt);
+%  
+% disp(norm(F_DDE_enclosure))
 
 
-%% Test some code for evaluating DF(x) NONRIGOROUSLY
+%% Construct a floating point approximation for DF(x_bar)
 % 
 x = a_gt;
 % build operator evaluations
@@ -117,8 +93,6 @@ A_dagger_bar = lambeta_matrix + alpha * R_DDE_matrix + alpha * (left_times_Rx.Ma
 A_dagger_bar(1, :) = [1, zeros(1, numCoef^2 - 1)];
 A_dagger_bar(2, :) = [0, 1, zeros(1, numCoef^2 - 2)];
 A_dagger_bar(1 + numCoef, :) = [zeros(1, numCoef), 1, zeros(1, numCoef^2 - numCoef - 1)];
-
-
 
 %% Code for computing Y0 bound
 % compute low order terms of AF(x_hat) i.e. A o Pi^N o F o Pi^N
@@ -189,7 +163,7 @@ Z1 = (2*alpha_enclosure*x_hat.norm())/(real(lambda_enclosure(1))*(numCoef-1) - a
 Z2 = 2*alpha_enclosure*max(1./(real(lambda_enclosure(1))*(numCoef-1) - alpha_enclosure*exp(-real(lambda_enclosure(1))*(numCoef-1))), norm(A_bar_enclosure, 1))
 
 %% Solve radii polynomial
-r = solveradiipoly([Z2, (Z0 + Z1 -1), Y0])
+r_DDE = solveradiipoly([Z2, (Z0 + Z1 -1), Y0])
 
 
 % disp(size(DF_matrix, 1))

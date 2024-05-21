@@ -24,6 +24,7 @@ clc
 computerPath = pcpath('mac');
 addpath(genpath([computerPath,'Dropbox/Matlab/IMP']))
 
+tic
 % set up parameters for the pseudospectral approximation
 n = 10;
 numCoef = 25;
@@ -67,10 +68,10 @@ for eigenvalue = val
 end
 
 % Choose M and epsilon as required to satisfy Lemma 18
-M = 725; % cutoff for computation in the Z1 bound (see paper)
+M = 1000; % cutoff for computation in the Z1 bound (see paper)
 epsilon = real(lambda_enclosure(1))*M - norm(D_enclosure, 1);  % choose the largest epsilon which satisfies Proposition 16
 if sup(epsilon) < inf(alpha_enclosure*norm(D_enclosure, 1)/(M*real(lambda_enclosure(1))))
-    error('Chosen M and epsilon do not satisfy Lemma 18')
+    error('Chosen M and epsilon do not satisfy Lemma 20')
 end
 
 % get scaled eigenvector for lambda_1
@@ -189,10 +190,10 @@ lambeta__to_order_M_values = lambeta_map(lambda_enclosure, allOnes_to_order_M_en
 % NONRIGOROUS VERSION
 % allOnes_to_order_M_enclosure = Scalar(ones(M,M), {'Taylor', 'Taylor'});
 % Rn_to_order_M_values = Rn_PSA(lambda, D, allOnes_to_order_M_enclosure);
-% lambeta__to_order_M_values = lambeta_map(lambda, allOnes_to_order_M_enclosure);
+% lambeta_to_order_M_values = lambeta_map(lambda, allOnes_to_order_M_enclosure);
 
-
-Z12_sum = 1./(Rn_to_order_M_values.Coefficient + lambeta__to_order_M_values.Coefficient);
+%% 
+Z12_sum = 1./(alpha_enclosure*Rn_to_order_M_values.Coefficient + lambeta__to_order_M_values.Coefficient);
 % % Z12_sum.Coefficient(1:numCoef, 1:numCoef) = intval(0);
 Z12_sum(1:numCoef, 1:numCoef) = 0;
 
@@ -210,11 +211,11 @@ Z1 = Z11 + alpha_enclosure*Z12*Z13
 % Z1 = (2*alpha_enclosure*x_hat.norm())/(real(lambda_enclosure(1))*(numCoef-1)) + norm(A_bar_enclosure*(DF_x_enclosure - A_dagger_bar_enclosure),1)
 
 
-%% Z2 bound
+% Z2 bound
 Z21 = max(Z12, norm(An_bar_enclosure, 1)); 
 Z22 = Z13_max;
 Z2 = 2*alpha_enclosure*Z21*Z22
 
 % solve radii polynomial
 r = solveradiipoly([Z2, (Z0 + Z1 -1), Y0])
-
+toc

@@ -2,7 +2,7 @@ function R_u = blowup(lambda, D, u)
 %BLOWUP - Evaluate the blowup operator for the pseudospectral ODE associated with some DDE.
 %
 %   Syntax:
-%       Ru = BLOWUP(u, lambda, D) evaluates the function R_n(p)_beta = p_beta(D - <lambda, beta>I)^{-1}*D*ONE)
+%       Ru = BLOWUP(u, lambda, D) evaluates the function R_n(u)_beta = u_beta(D - <lambda, beta>I)^{-1}*D*ONE)
 %       where ONE is the vector of all ones in R^n.
 %
 %   Inputs:
